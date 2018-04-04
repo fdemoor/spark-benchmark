@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Configuration status="WARN">
+
+<Appenders>
+	<Console name="Console" target="SYSTEM_OUT">
+		<PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+	</Console>
+	<File name="load" fileName="${env:LOGDIR}/load.csv">
+		<PatternLayout pattern="%m%n" />
+	</File>
+	<File name="vecmult" fileName="${env:LOGDIR}/vecmult.csv">
+		<PatternLayout pattern="%m%n" />
+	</File>
+	<File name="matmult" fileName="${env:LOGDIR}/matmult.csv">
+		<PatternLayout pattern="%m%n" />
+	</File>
+	<File name="join" fileName="${env:LOGDIR}/join.csv">
+		<PatternLayout pattern="%m%n" />
+	</File>
+	<File name="joinCard" fileName="${env:LOGDIR}/joinCard.csv">
+		<PatternLayout pattern="%m%n" />
+	</File>
+	<File name="joinSQL" fileName="${env:LOGDIR}/joinSQL.csv">
+		<PatternLayout pattern="%m%n" />
+	</File>
+	<File name="joinSQLCard" fileName="${env:LOGDIR}/joinSQLCard.csv">
+		<PatternLayout pattern="%m%n" />
+	</File>
+	<File name="lr" fileName="${env:LOGDIR}/lr.csv">
+		<PatternLayout pattern="%m%n" />
+	</File>
+</Appenders>
+
+<Loggers>
+	<Root level="trace">
+		<AppenderRef ref="Console"/>
+	</Root>
+	<Logger name="load" additivity="false" level="trace">
+		<AppenderRef ref="Console"/>
+        	<Appender-ref ref="load"/>
+	</Logger>
+	<Logger name="mult1" additivity="false" level="trace">
+		<AppenderRef ref="Console"/>
+        	<Appender-ref ref="vecmult"/>
+	</Logger>
+	<Logger name="mult100" additivity="false" level="trace">
+		<AppenderRef ref="Console"/>
+        	<Appender-ref ref="matmult"/>
+	</Logger>
+	<Logger name="join" additivity="false" level="trace">
+		<AppenderRef ref="Console"/>
+        	<Appender-ref ref="join"/>
+	</Logger>
+	<Logger name="joinCard" additivity="false" level="trace">
+		<AppenderRef ref="Console"/>
+        	<Appender-ref ref="joinCard"/>
+	</Logger>
+	<Logger name="joinSQL" additivity="false" level="trace">
+		<AppenderRef ref="Console"/>
+        	<Appender-ref ref="joinSQL"/>
+	</Logger>
+	<Logger name="joinSQLCard" additivity="false" level="trace">
+		<AppenderRef ref="Console"/>
+        	<Appender-ref ref="joinSQLCard"/>
+	</Logger>
+	<Logger name="lr" additivity="false" level="trace">
+		<AppenderRef ref="Console"/>
+        	<Appender-ref ref="lr"/>
+	</Logger>
+</Loggers>
+
+</Configuration>
