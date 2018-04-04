@@ -8,7 +8,7 @@ We assume the data is stored in a [MonetDB](https://www.monetdb.org/Home) dbfarm
 
 ### Prerequisites
 
-We assume you have a [MonetDB](https://www.monetdb.org/Home) server running either locally or on a remove machine, where the data is stored.
+We assume you have a [MonetDB](https://www.monetdb.org/Home) server running either locally or on a remote machine, where the data is stored.
 Please refer to the documentation on the website for setup.
 
 [SBT](https://www.scala-sbt.org/) is required for compilation.
@@ -17,7 +17,7 @@ We also suppose you have downloaded Spark 2.3.0.
 
 ### Workloads
 
-We suppose the dbfarm has a database that contains several tables filled with random double values:
+We assume the dbfarm has a database that contains several tables filled with random double values:
 
 * `trand100x1r` to `trand100x1000000r`: 100 columns, with 1, 10, 100, 1K, 10K, 100K and 1M rows.
 

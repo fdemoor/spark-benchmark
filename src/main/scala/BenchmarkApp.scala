@@ -135,7 +135,7 @@ object BenchmarkApp extends Logging {
 
   private def lrBenchmark(spark: SparkSession, numIter: Int, gmap: Boolean) = {
     logger.info(s"Starting linear regression benchmark (${numIter} iteration(s))")
-    BenchmarkLR.run(spark, numIter, gmap)
+    BenchmarkLR.run(spark, datasetLoader, numIter, gmap)
     logger.info("Done with linear regression benchmark")
   }
 

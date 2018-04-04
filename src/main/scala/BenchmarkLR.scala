@@ -85,11 +85,10 @@ object BenchmarkLR extends Logging {
     }
   }
 
-  def run(spark: SparkSession, numIter: Int, gmap: Boolean) {
+  def run(spark: SparkSession, datasetLoader: DatasetLoader, numIter: Int,
+          gmap: Boolean) {
 
     logger.trace("Loading datasets from MonetDB")
-    val datasetLoader = new DatasetLoaderFromMonetDB(spark, "localhost", "50000",
-      "monetdb", "monetdb", "bixi", "sys")
     val stations = datasetLoader.load("stations2017")
     val tripdata = datasetLoader.load("tripdata2017")
 
