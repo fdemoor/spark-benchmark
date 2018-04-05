@@ -16,6 +16,13 @@ object Utils {
     return t1 - t0
   }
 
+  def evalMatrix(mat: BlockMatrix) = {
+    val it = mat.toLocalMatrix().rowIter
+    while (it.hasNext) {
+      val v = it.next
+    }
+  }
+
   def dataframeToMatrix(df: Dataset[Row]) : BlockMatrix = {
     val assembler = new VectorAssembler().setInputCols(df.columns).setOutputCol("vector")
     val df2 = assembler.transform(df)

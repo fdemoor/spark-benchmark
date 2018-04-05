@@ -15,7 +15,7 @@ case class Config(benchmark: String = "join", ip: String = "localhost",
 
 object BenchmarkApp extends Logging {
 
-  private final val nbLoadExec = 5
+  private final val nbLoadExec = 10
   private final val nbLoadWarmupExec = 2
   private final val nbMultExec = 100
   private final val nbMultWarmupExec = 2
@@ -30,6 +30,7 @@ object BenchmarkApp extends Logging {
         val dt = Utils.time {
           val df = datasetLoader.load("trand100x" + k.toString + "r")
           val mat = Utils.dataframeToMatrix(df)
+          Utils.evalMatrix(mat)
         }
         if (i > nbLoadWarmupExec) {
           results.addResult(k, dt)
@@ -56,7 +57,8 @@ object BenchmarkApp extends Logging {
       }
       val dt = Utils.time {
         for (i <- 1 to nbMultExec) {
-          matL.multiply(matR)
+          val mat = matL.multiply(matR)
+          Utils.evalMatrix(mat)
         }
       }
       results.addResult(k, dt)
@@ -85,12 +87,11 @@ object BenchmarkApp extends Logging {
         => df1("c" + j.toString) === df2("b" + j.toString)).reduce(_ && _)
 
       val dt = Utils.time {
-        df1.join(df2, joinExprs)
+        val df = df1.join(df2, joinExprs)
+        resultsCard.addResult(i + 1, df.count())
       }
       results.addResult(i + 1, dt)
 
-      val df = df1.join(df2, joinExprs)
-      resultsCard.addResult(i + 1, df.count())
     }
     results.log()
     resultsCard.log()
@@ -121,12 +122,11 @@ object BenchmarkApp extends Logging {
       query = query + "c" + i.toString + " = b" + i.toString
 
       val dt = Utils.time {
-        spark.sql(query)
+        val df = spark.sql(query)
+        resultsCard.addResult(i + 1, df.count())
       }
       results.addResult(i + 1, dt)
 
-      val df = spark.sql(query)
-      resultsCard.addResult(i + 1, df.count())
     }
     results.log()
     resultsCard.log()
