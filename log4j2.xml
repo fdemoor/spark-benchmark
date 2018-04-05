@@ -9,6 +9,9 @@
 	<File name="load" fileName="${env:LOGDIR}/load.csv">
 		<PatternLayout pattern="%m%n" />
 	</File>
+	<File name="matrix" fileName="${env:LOGDIR}/matrix.csv">
+		<PatternLayout pattern="%m%n" />
+	</File>
 	<File name="vecmult" fileName="${env:LOGDIR}/vecmult.csv">
 		<PatternLayout pattern="%m%n" />
 	</File>
@@ -39,6 +42,10 @@
 	<Logger name="load" additivity="false" level="trace">
 		<AppenderRef ref="Console"/>
         	<Appender-ref ref="load"/>
+	</Logger>
+	<Logger name="matrix" additivity="false" level="trace">
+		<AppenderRef ref="Console"/>
+        	<Appender-ref ref="matrix"/>
 	</Logger>
 	<Logger name="mult1" additivity="false" level="trace">
 		<AppenderRef ref="Console"/>

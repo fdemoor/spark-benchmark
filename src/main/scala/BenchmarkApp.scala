@@ -10,7 +10,7 @@ import scopt._
 
 case class Config(benchmark: String = "join", ip: String = "localhost",
   port: String = "50000", username: String = "monetdb", password: String = "monetdb",
-  database: String = "aida", schema: String = "test01", numIter: Int = 5,
+  database: String = "aida", schema: String = "sys", numIter: Int = 5,
   gmap: Boolean = false, kwargs: Map[String,String] = Map())
 
 object BenchmarkApp extends Logging {
@@ -24,20 +24,27 @@ object BenchmarkApp extends Logging {
   private def loadBenchmark(spark: SparkSession) = {
     logger.info("Starting load benchmark")
     val results = new BenchmarkResult("load")
+    val resultsMat = new BenchmarkResult("matrix")
     val kValues = Seq(1, 10, 100, 1000, 10000, 100000)
     for (k <- kValues) {
       for (i <- 1 to nbLoadWarmupExec + nbLoadExec) {
+        var df: Dataset[Row] = null
         val dt = Utils.time {
-          val df = datasetLoader.load("trand100x" + k.toString + "r")
+          df = datasetLoader.load("trand100x" + k.toString + "r")
+          df.cache()
+        }
+        val dt2 = Utils.time {
           val mat = Utils.dataframeToMatrix(df)
-          Utils.evalMatrix(mat)
+          mat.cache()
         }
         if (i > nbLoadWarmupExec) {
           results.addResult(k, dt)
+          resultsMat.addResult(k, dt2)
         }
       }
     }
     results.log()
+    resultsMat.log()
     logger.info("Done with load benchmark")
   }
 
@@ -48,17 +55,19 @@ object BenchmarkApp extends Logging {
 
     val dfR = datasetLoader.load("trand100x" + right + "r")
     val matR = Utils.dataframeToMatrix(dfR).transpose
+    matR.cache()
 
     for (k <- kValues) {
       val dfL = datasetLoader.load("trand100x" + k.toString + "r")
       val matL = Utils.dataframeToMatrix(dfL)
+      matL.cache()
       for (i <- 1 to nbMultWarmupExec) {
         val mat = matL.multiply(matR)
       }
       val dt = Utils.time {
         for (i <- 1 to nbMultExec) {
           val mat = matL.multiply(matR)
-          Utils.evalMatrix(mat)
+          mat.cache()
         }
       }
       results.addResult(k, dt)

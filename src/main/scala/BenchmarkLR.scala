@@ -42,6 +42,10 @@ object BenchmarkLR extends Logging {
     val trainDataSetValidMat = Utils.dataframeToMatrix(trainDataSetValid)
     val trainDataSetMat = Utils.dataframeToMatrix(trainDataSet)
 
+    // Cache to speed-up since used in every iteration
+    trainDataSetValidMat.cache()
+    trainDataSetMat.cache()
+
     logger.trace(s"Starting training iterations (${numIter})")
     for (i <- 1 to numIter) {
       val paramsMat = Utils.dataframeToMatrix(params)
