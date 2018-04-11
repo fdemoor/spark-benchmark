@@ -33,6 +33,9 @@
 	<File name="lr" fileName="${env:LOGDIR}/lr.csv">
 		<PatternLayout pattern="%m%n" />
 	</File>
+	<File name="lr-basic" fileName="${env:LOGDIR}/lr-basic.csv">
+		<PatternLayout pattern="%m%n" />
+	</File>
 </Appenders>
 
 <Loggers>
@@ -72,8 +75,10 @@
         	<Appender-ref ref="joinSQLCard"/>
 	</Logger>
 	<Logger name="lr" additivity="false" level="trace">
-		<AppenderRef ref="Console"/>
         	<Appender-ref ref="lr"/>
+	</Logger>
+	<Logger name="lr-basic" additivity="false" level="trace">
+        	<Appender-ref ref="lr-basic"/>
 	</Logger>
 </Loggers>
 

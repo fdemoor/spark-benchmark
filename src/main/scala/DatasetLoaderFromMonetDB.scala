@@ -15,6 +15,8 @@ class DatasetLoaderFromMonetDB(spark: SparkSession, ip: String, port: String,
     options.put("user", user)
     options.put("password", pwd)
     options.put("driver", "nl.cwi.monetdb.jdbc.MonetDriver")
+    options.put("fetchsize", "1000000")
+    options.put("batchsize", "1000000")
     return spark.read.format("jdbc").option("dbtable", sname + "." + name)
       .options(options).load()
   }

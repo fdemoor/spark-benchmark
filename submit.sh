@@ -4,9 +4,11 @@ BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 typeset -A config
 config=(
-    [spark]=""
-		[nthreads]="1"
-		[output]="output"
+    [sparkDir]=""
+		[sparkNThreads]="1"
+		[sparkDriverMemory]="6G"
+    [sparkEventLogDir]="/tmp/spark-events"
+    [resultsOutputDir]="output"
 )
 
 while read line
@@ -18,10 +20,10 @@ do
     fi
 done < submit.conf
 
-BIN="${config[spark]}/bin/spark-submit"
+BIN="${config[sparkDir]}/bin/spark-submit"
 if [ ! -f "$BIN" ]; then
 	echo "Spark submit binary not found, specify the Spark basedir path in submit.conf"
-	echo "Path given was ${config[spark]}"
+	echo "Path given was ${config[sparkDir]}"
 	exit 1
 fi
 
@@ -54,15 +56,17 @@ LOG4J_SCALA="org.apache.logging.log4j":"log4j-api-scala_2.11":"11.0"
 LOG4J_API="org.apache.logging.log4j":"log4j-api":"2.11.0"
 LOG4J_CORE="org.apache.logging.log4j":"log4j-core":"2.11.0"
 
-mkdir -p /tmp/spark-events
-mkdir -p ${config[output]}
-export LOGDIR=${config[output]}
+mkdir -p ${config[resultsOutputDir]}
+export LOGDIR=${config[resultsOutputDir]}
+mkdir -p ${config[sparkEventLogDir]}
 
 $BIN \
 --class $APP --jars $MONETDB_JDBC_JAR,$SCOPT_JAR \
---master local[${config[nthreads]}] \
---conf spark.eventLog.enabled=true \
+--master local[${config[sparkNThreads]}] \
 --packages $LOG4J_SCALA,$LOG4J_API,$LOG4J_CORE,$GEOGRAPHICLIB \
 --conf spark.executor.extraJavaOptions="-Dlog4j.configurationFile=log4j2.xml" \
 --conf spark.driver.extraJavaOptions="-Dlog4j.configurationFile=log4j2.xml" \
+--conf spark.driver.memory="${config[sparkDriverMemory]}" \
+--conf spark.eventLog.enabled="true" \
+--conf spark.eventLog.dir="${config[sparkEventLogDir]}" \
 $TARGET $@

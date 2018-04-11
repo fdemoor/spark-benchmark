@@ -1,3 +1,4 @@
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.Row
 import org.apache.spark.ml.feature.VectorAssembler
@@ -22,6 +23,10 @@ object Utils {
     return new IndexedRowMatrix(df2.select("vector").rdd.map{
       case Row(v: Vector) => Vectors.fromML(v)
     }.zipWithIndex.map { case (v, i) => IndexedRow(i, v) }).toBlockMatrix()
+  }
+
+  def eval(spark: SparkSession, mat: BlockMatrix) = {
+    spark.sparkContext.parallelize(mat.toLocalMatrix().rowIter.toSeq).foreach(Unit => ())
   }
 
   def squaredErr(actual: BlockMatrix, predicted: BlockMatrix) : Double = {

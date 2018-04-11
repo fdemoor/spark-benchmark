@@ -3,6 +3,7 @@ import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.Column
 import org.apache.spark.sql.functions._
+import org.apache.spark.mllib.linalg.distributed.BlockMatrix
 
 import org.apache.logging.log4j.scala.Logging
 
@@ -10,8 +11,26 @@ import scopt._
 
 case class Config(benchmark: String = "join", ip: String = "localhost",
   port: String = "50000", username: String = "monetdb", password: String = "monetdb",
-  database: String = "aida", schema: String = "sys", numIter: Int = 5,
-  gmap: Boolean = false, kwargs: Map[String,String] = Map())
+  database: String = "database", schema: String = "sys", kwargs: Map[String,String] = Map())
+
+// Because of Spark lazy evaluation, we proceed as follows to measure time
+// performance in the micro-benchmarks:
+//   - f: set of operations that returns a dataframe or a matrix
+//   - eval: function that iterates over all the rows of the dataframe or matrix
+//           in input and does nothing (basically foreach(Unit => ()))
+//   - measure the time values t1 and t2 as shown below
+//
+//       val x = f(_); x.cache(); eval(x)         eval(x)
+//     <----------------v----------------->     <----v---->
+//                      t1                           t2
+//
+//   - compute t1 - t2 and log the result
+// When calling f, a logical plan is built, but the data is not physically
+// accessed. An action is actually required for that, hence the call to eval.
+// The call to the .cache() method tells to keep the data in memory when it is
+// first computed. At the second call to eval, the computations of f are not
+// done again, but we thus measure the time t2 the iterations take and substract
+// from t1 to get the actual time of the computations in f.
 
 object BenchmarkApp extends Logging {
 
@@ -21,6 +40,7 @@ object BenchmarkApp extends Logging {
   private final val nbMultWarmupExec = 2
   private var datasetLoader: DatasetLoader = null
 
+  // Load a table into a dataframe and convert it to a matrix format
   private def loadBenchmark(spark: SparkSession) = {
     logger.info("Starting load benchmark")
     val results = new BenchmarkResult("load")
@@ -31,15 +51,19 @@ object BenchmarkApp extends Logging {
         var df: Dataset[Row] = null
         val dt = Utils.time {
           df = datasetLoader.load("trand100x" + k.toString + "r")
-          df.cache()
         }
+        var mat: BlockMatrix = null
         val dt2 = Utils.time {
-          val mat = Utils.dataframeToMatrix(df)
+          mat = Utils.dataframeToMatrix(df)
           mat.cache()
+          Utils.eval(spark, mat)
+        }
+        val dt3 = Utils.time {
+          Utils.eval(spark, mat)
         }
         if (i > nbLoadWarmupExec) {
           results.addResult(k, dt)
-          resultsMat.addResult(k, dt2)
+          resultsMat.addResult(k, dt2 - dt3)
         }
       }
     }
@@ -48,10 +72,11 @@ object BenchmarkApp extends Logging {
     logger.info("Done with load benchmark")
   }
 
+  // Perform a matrix multiplication between two tables
   private def multBenchmark(spark: SparkSession, right: String) = {
     logger.info("Starting mult benchmark")
     val results = new BenchmarkResult("mult" + right)
-    val kValues = Seq(1, 10, 100, 1000)
+    val kValues = Seq(1, 10, 100, 1000, 10000, 100000)
 
     val dfR = datasetLoader.load("trand100x" + right + "r")
     val matR = Utils.dataframeToMatrix(dfR).transpose
@@ -64,11 +89,18 @@ object BenchmarkApp extends Logging {
       for (i <- 1 to nbMultWarmupExec) {
         val mat = matL.multiply(matR)
       }
-      val dt = Utils.time {
-        for (i <- 1 to nbMultExec) {
-          val mat = matL.multiply(matR)
+      var dt: Long = 0
+      for (i <- 1 to nbMultExec) {
+        var mat: BlockMatrix = null
+        val dt2 = Utils.time {
+          mat = matL.multiply(matR)
           mat.cache()
+          Utils.eval(spark, mat)
         }
+        val dt3 = Utils.time {
+          Utils.eval(spark, mat)
+        }
+        dt += (dt2 - dt3)
       }
       results.addResult(k, dt)
     }
@@ -76,6 +108,7 @@ object BenchmarkApp extends Logging {
     logger.info("Done with mult benchmark")
   }
 
+  // Join two tables with Spark API join method
   private def joinBenchmark(spark: SparkSession) = {
     logger.info("Starting join benchmark")
     val results = new BenchmarkResult("join")
@@ -95,11 +128,17 @@ object BenchmarkApp extends Logging {
       val joinExprs = (0 to i toSeq).map(j
         => df1("c" + j.toString) === df2("b" + j.toString)).reduce(_ && _)
 
+      var df: Dataset[Row] = null
       val dt = Utils.time {
-        val df = df1.join(df2, joinExprs)
-        resultsCard.addResult(i + 1, df.count())
+        df = df1.join(df2, joinExprs)
+        df.cache()
+        df.foreach(Unit => ())
       }
-      results.addResult(i + 1, dt)
+      val dt2 = Utils.time {
+        df.foreach(Unit => ())
+      }
+      resultsCard.addResult(i + 1, df.count())
+      results.addResult(i + 1, dt - dt2)
 
     }
     results.log()
@@ -107,6 +146,7 @@ object BenchmarkApp extends Logging {
     logger.info("Done with join benchmark")
   }
 
+  // Join two tables with a SQL query
   private def joinSQLBenchmark(spark: SparkSession) = {
     logger.info("Starting joinSQL benchmark")
     val results = new BenchmarkResult("joinSQL")
@@ -130,11 +170,17 @@ object BenchmarkApp extends Logging {
       }
       query = query + "c" + i.toString + " = b" + i.toString
 
+      var df: Dataset[Row] = null
       val dt = Utils.time {
-        val df = spark.sql(query)
-        resultsCard.addResult(i + 1, df.count())
+        df = spark.sql(query)
+        df.cache()
+        df.foreach(Unit => ())
       }
-      results.addResult(i + 1, dt)
+      val dt2 = Utils.time {
+        df.foreach(Unit => ())
+      }
+      resultsCard.addResult(i + 1, df.count())
+      results.addResult(i + 1, dt - dt2)
 
     }
     results.log()
@@ -142,22 +188,31 @@ object BenchmarkApp extends Logging {
     logger.info("Done with joinSQL benchmark")
   }
 
-  private def lrBenchmark(spark: SparkSession, numIter: Int, gmap: Boolean) = {
-    logger.info(s"Starting linear regression benchmark (${numIter} iteration(s))")
-    BenchmarkLR.run(spark, datasetLoader, numIter, gmap)
+  // Linear regression example, basic or full workflow
+  private def lrBenchmark(spark: SparkSession, basic: Boolean) = {
+    logger.info(s"Starting linear regression benchmark")
+    if (basic) {
+      logger.info(s"Basic workflow")
+      BenchmarkLRBasic.run(spark, datasetLoader)
+    } else {
+      logger.info(s"Full workflow")
+      BenchmarkLR.run(spark, datasetLoader)
+    }
     logger.info("Done with linear regression benchmark")
   }
 
   def main(args: Array[String]) {
 
+    // Get the spark session
     val spark = SparkSession.builder.appName("Benchmark Application").getOrCreate()
     import spark.implicits._
 
+    // Setup the CLI
     val parser = new scopt.OptionParser[Config]("BenchmarkApp") {
       head("Spark Benchmark", "1.0")
 
       opt[String]('b', "benchmark").required().action( (x, c) =>
-        c.copy(benchmark = x) ).text("required: load | matmult | vecmult | join | joinSQL | lr")
+        c.copy(benchmark = x) ).text("required: load | matmult | vecmult | join | joinSQL | lr | lr-basic")
 
       opt[String]('i', "ip").valueName("<value>").
         action( (x, c) => c.copy(ip = x) ).
@@ -183,18 +238,11 @@ object BenchmarkApp extends Logging {
         action( (x, c) => c.copy(schema = x) ).
         text("name of the database schema where to find the tables")
 
-      opt[Int]('n', "numiter").valueName("<value>").
-        action( (x, c) => c.copy(numIter = x) ).
-        text("number of iterations for the linear regression")
-
-      opt[Unit]("gmap").
-        action( (_, c) => c.copy(gmap = true) ).
-        text("use google maps data for distance in linear regression")
-
       help("help").text("prints this message")
 
     }
 
+    // Parse the command line to retrieve option values
     parser.parse(args, Config()) match {
       case Some(config) =>
         logger.info(s"Getting tables from MonetDB: ${config.ip}:${config.port}/${config.database}")
@@ -204,12 +252,15 @@ object BenchmarkApp extends Logging {
         datasetLoader = new DatasetLoaderFromMonetDB(spark, config.ip, config.port,
           config.username, config.password, config.database, config.schema)
         config.benchmark match {
+          // Micro-benchmarks
           case "load" => loadBenchmark(spark)
           case "vecmult" => multBenchmark(spark, "1")
           case "matmult" => multBenchmark(spark, "100")
           case "join" => joinBenchmark(spark)
           case "joinSQL" => joinSQLBenchmark(spark)
-          case "lr" => lrBenchmark(spark, config.numIter, config.gmap)
+          // Linear regression benchmark
+          case "lr" => lrBenchmark(spark, false)
+          case "lr-basic" => lrBenchmark(spark, true)
           case _ => throw new RuntimeException("invalid benchmark")
         }
 

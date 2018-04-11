@@ -27,17 +27,21 @@ The linear regression benchmark also requires the following data
 
 * `stations2017` and `tripdata2017` from BIXI that can be obtained [here](https://www.kaggle.com/aubertsigouin/biximtl) (resp. `Stations_2017.csv` and `OD_2017.csv` files that you have to insert into a database)
 
-* `gmdata2017` obtained from Google Maps API
+* `gmdata2017` obtained from the Google Maps API
 
 ### Configuration
 
 See the `submit.conf` file to specify various parameters:
 
-* `spark`: the path where Spark is located
-  
-* `nthreads`: the maximum number of threads Spark is allowed to use
+* `sparkDir`: the path where Spark is located
 
-* `output`: where to log the results
+* `sparkNThreads`: the maximum number of threads Spark is allowed to use
+
+* `sparkDriverMemory`: the maximum amount of memory the Spark driver can use
+
+* `sparkEventLogDir`: where Spark will save event logs
+
+* `resultsOutputDir`: where to log the results
 
 ### Running
 
@@ -45,11 +49,14 @@ Simply type `$ ./submit.sh --help` to display the application usage.
 
 ## Output format
 
-### {load,vecmult,matmult}.csv
+### {load,matrix,vecmult,matmult}.csv
 
 Each line corresponds to a table `trand100x1(0)*r`.
 First number is the number of rows (thus ranging from 1e0 to 1e6).
 Following are the time values that should be averaged if more than one.
+Load micro-benchmark results are separated into load.csv and matrix.csv:
+the latter is the load of the dataframe and the former its conversion to a matrix
+format.
 
 ### {join,joinSQL}.csv
 
@@ -57,8 +64,11 @@ Each line corresponds to a join operation.
 First number is the number of columns involved in the join condition, ranging from 1 to 11.
 Following are the time values.
 
-### lr.csv
+### {lr,lr-basic}.csv
 
-WIP
+Each line corresponds to a statement.
+First number is an identifier (a counter incremented at each statement), next is the time value.
 
+## Bixi Linear Regression
 
+See [full workflow](wiki/BixiLinearSpark.md) and [basic workflow](wiki/BixiLinearSpark-Basic.md).
