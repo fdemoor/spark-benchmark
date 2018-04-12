@@ -49,6 +49,8 @@ Simply type `$ ./submit.sh --help` to display the application usage.
 
 ## Output format
 
+All time values are measured in nanoseconds.
+
 ### {load,matrix,vecmult,matmult}.csv
 
 Each line corresponds to a table `trand100x1(0)*r`.
@@ -66,8 +68,16 @@ Following are the time values.
 
 ### {lr,lr-basic}.csv
 
-Each line corresponds to a statement.
-First number is an identifier (a counter incremented at each statement), next is the time value.
+First number is an identifier, next are the time values which should be summed up.
+The identifiers are:
+
+* 0: feature engineering
+
+* 1: data loading
+
+* 2: model training
+
+* 3: model testing
 
 ## Bixi Linear Regression
 

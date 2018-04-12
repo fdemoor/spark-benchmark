@@ -1,7 +1,6 @@
 class TimeProfiler(name: String) {
 
   val res = new BenchmarkResult(name)
-  var counter = 0
   var t0 = System.nanoTime()
   var t1 = System.nanoTime()
 
@@ -9,10 +8,9 @@ class TimeProfiler(name: String) {
     t0 = System.nanoTime()
   }
 
-  def tick() = {
+  def tick(label: Int) = {
     t1 = System.nanoTime()
-    res.addResult(counter, t1 - t0)
-    counter += 1
+    res.addResult(label, t1 - t0)
     t0 = System.nanoTime()
   }
 

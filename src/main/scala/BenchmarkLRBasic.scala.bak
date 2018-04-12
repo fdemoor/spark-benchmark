@@ -19,18 +19,9 @@ object BenchmarkLRBasic extends Logging {
 
     import spark.implicits._
 
-    val tripdata2017 = datasetLoader.load("tripdata2017")
-    val stations2017 = datasetLoader.load("stations2017")
-    val freqStations = tripdata2017.filter(col("stscode") =!= col("endscode"))
-      .groupBy("stscode", "endscode").agg(count("id").alias("numtrips"))
-      .filter(col("numtrips") >= 50)
-
-    val gmdata2017 = datasetLoader.load("gmdata2017")
-    val gtripData = gmdata2017.join(tripdata2017, usingColumns=Seq("stscode", "endscode"))
-      .join(freqStations, usingColumns=Seq("stscode", "endscode"))
-      .select("id", "duration", "gdistm", "gduration")
+    val gtripData = datasetLoader.loadFromQuery("(select t.duration, g.gdistm, g.gduration from (   select stscode, endscode   from bixi.tripdata2017   where stscode<>endscode   group by stscode, endscode   having count(*) >= 50 )s, tripdata2017 t, gmdata2017 g where t.stscode = s.stscode   and t.endscode = s.endscode   and t.stscode = g.stscode   and t.endscode = g.endscode) as g")
       .withColumn("gdistm", col("gdistm").cast("double"))
-
+      
     val guniqueTripDist = gtripData.select("gdistm").distinct.sort(asc("gdistm"))
     val gsplitTripDist = guniqueTripDist.randomSplit(Array(1, 2), 42)
     val gtestTripDist = gsplitTripDist(0)
@@ -89,6 +80,10 @@ object BenchmarkLRBasic extends Logging {
     gpred = gtrainDataSetMat.multiply(gparamsMat.transpose)
     gsqerr = squaredErr(gtrainDataSetDurationMat, gpred)
     println(gsqerr)
+
+    // Cache to speed-up since used in every iteration
+    gtrainDataSetMat.cache()
+    gtrainDataSetDurationMat.cache()
 
     for (i <- 0 to 999) {
       val gparamsMat = dataframeToMatrix(gparams)

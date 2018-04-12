@@ -124,6 +124,11 @@ object BenchmarkApp extends Logging {
     spark.sql("SELECT * FROM df1")
     spark.sql("SELECT * FROM df2")
 
+    df1.cache()
+    df1.foreach(Unit => ())
+    df2.cache()
+    df2.foreach(Unit => ())
+
     for (i <- 0 to 10) {
       val joinExprs = (0 to i toSeq).map(j
         => df1("c" + j.toString) === df2("b" + j.toString)).reduce(_ && _)
