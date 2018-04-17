@@ -26,6 +26,8 @@ object BenchmarkLR extends Logging {
     tripdata2017.cache()
     tripdata2017.foreach(Unit => ())
     time.tick(1)
+    tripdata2017.foreach(Unit => ())
+    time.tick(-1)
     tripdata2017.show(5)
     tripdata2017.describe().show()
 
@@ -34,6 +36,8 @@ object BenchmarkLR extends Logging {
     stations2017.cache()
     stations2017.foreach(Unit => ())
     time.tick(1)
+    stations2017.foreach(Unit => ())
+    time.tick(-1)
     stations2017.show(5)
     stations2017.describe().show()
 
@@ -105,7 +109,13 @@ object BenchmarkLR extends Logging {
       }.zipWithIndex.map { case (v, i) => IndexedRow(i, v) }).toBlockMatrix()
     }
 
+    time.tick(0)
     val trainDataSetMat = dataframeToMatrix(trainDataSet)
+    trainDataSetMat.cache()
+    Utils.eval(spark, trainDataSetMat)
+    time.tick(1)
+    Utils.eval(spark, trainDataSetMat)
+    time.tick(-1)
     var paramsMat = dataframeToMatrix(params)
     var pred = trainDataSetMat.multiply(paramsMat.transpose)
 
@@ -118,7 +128,13 @@ object BenchmarkLR extends Logging {
       return s / (2 * actual.numRows())
     }
 
+    time.tick(0)
     val trainDataSetDurationMat = dataframeToMatrix(trainDataSetDuration)
+    trainDataSetDurationMat.cache()
+    Utils.eval(spark, trainDataSetDurationMat)
+    time.tick(1)
+    Utils.eval(spark, trainDataSetDurationMat)
+    time.tick(-1)
     var sqerr = squaredErr(trainDataSetDurationMat, pred)
     println(sqerr)
 
@@ -146,6 +162,8 @@ object BenchmarkLR extends Logging {
     gmdata2017.cache()
     gmdata2017.foreach(Unit => ())
     time.tick(1)
+    gmdata2017.foreach(Unit => ())
+    time.tick(-1)
     gmdata2017.show(5)
     gmdata2017.describe().show()
 
@@ -173,10 +191,22 @@ object BenchmarkLR extends Logging {
     val gtrainDataSetDuration = gtrainData.select("duration")
     var gparams = Seq(1.0).toDF("a").withColumn("b", lit(1.0))
 
+    time.tick(0)
     val gtrainDataSetMat = dataframeToMatrix(gtrainDataSet)
+    gtrainDataSetMat.cache()
+    Utils.eval(spark, gtrainDataSetMat)
+    time.tick(1)
+    Utils.eval(spark, gtrainDataSetMat)
+    time.tick(-1)
     var gparamsMat = dataframeToMatrix(gparams)
     var gpred = gtrainDataSetMat.multiply(gparamsMat.transpose)
+    time.tick(0)
     val gtrainDataSetDurationMat = dataframeToMatrix(gtrainDataSetDuration)
+    gtrainDataSetDurationMat.cache()
+    Utils.eval(spark, gtrainDataSetDurationMat)
+    time.tick(1)
+    Utils.eval(spark, gtrainDataSetDurationMat)
+    time.tick(-1)
     var gsqerr = squaredErr(gtrainDataSetDurationMat, gpred)
     println(gsqerr)
     val gupdate = gradDesc(gtrainDataSetDurationMat, gpred, gtrainDataSetMat)
@@ -186,10 +216,6 @@ object BenchmarkLR extends Logging {
     gpred = gtrainDataSetMat.multiply(gparamsMat.transpose)
     gsqerr = squaredErr(gtrainDataSetDurationMat, gpred)
     println(gsqerr)
-
-    // Cache to speed-up since used in every iteration
-    gtrainDataSetMat.cache()
-    gtrainDataSetDurationMat.cache()
 
     time.tick(0)
     for (i <- 0 to 999) {
@@ -214,8 +240,19 @@ object BenchmarkLR extends Logging {
     val gtestDataSet = gtestData.select("gdistm").withColumn("x0", lit(1)).select("x0", "gdistm")
     val gtestDataSetDuration = gtestData.select("duration")
 
+    time.tick(3)
     val gtestDataSetDurationMat = dataframeToMatrix(gtestDataSetDuration)
+    gtestDataSetDurationMat.cache()
+    Utils.eval(spark, gtestDataSetDurationMat)
+    time.tick(1)
+    Utils.eval(spark, gtestDataSetDurationMat)
+    time.tick(-1)
     val gtestDataSetMat = dataframeToMatrix(gtestDataSet)
+    gtestDataSetMat.cache()
+    Utils.eval(spark, gtestDataSetMat)
+    time.tick(1)
+    Utils.eval(spark, gtestDataSetMat)
+    time.tick(-1)
     gparamsMat = dataframeToMatrix(gparams)
     val gtestpred = gtestDataSetMat.multiply(gparamsMat.transpose)
 

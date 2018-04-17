@@ -27,6 +27,8 @@ object BenchmarkLRBasic extends Logging {
     gtripData.cache()
     gtripData.foreach(Unit => ())
     time.tick(1)
+    gtripData.foreach(Unit => ())
+    time.tick(-1)
 
     val guniqueTripDist = gtripData.select("gdistm").distinct.sort(asc("gdistm"))
     val gsplitTripDist = guniqueTripDist.randomSplit(Array(1, 2), 42)
@@ -51,7 +53,14 @@ object BenchmarkLRBasic extends Logging {
       }.zipWithIndex.map { case (v, i) => IndexedRow(i, v) }).toBlockMatrix()
     }
 
+    time.tick(0)
     val gtrainDataSetMat = dataframeToMatrix(gtrainDataSet)
+    gtrainDataSetMat.cache()
+    Utils.eval(spark, gtrainDataSetMat)
+    time.tick(1)
+    Utils.eval(spark, gtrainDataSetMat)
+    time.tick(-1)
+
     var gparamsMat = dataframeToMatrix(gparams)
     var gpred = gtrainDataSetMat.multiply(gparamsMat.transpose)
 
@@ -64,7 +73,14 @@ object BenchmarkLRBasic extends Logging {
       return s / (2 * actual.numRows())
     }
 
+    time.tick(0)
     val gtrainDataSetDurationMat = dataframeToMatrix(gtrainDataSetDuration)
+    gtrainDataSetDurationMat.cache()
+    Utils.eval(spark, gtrainDataSetDurationMat)
+    time.tick(1)
+    Utils.eval(spark, gtrainDataSetDurationMat)
+    time.tick(-1)
+
     var gsqerr = squaredErr(gtrainDataSetDurationMat, gpred)
     println(gsqerr)
 
@@ -86,10 +102,6 @@ object BenchmarkLRBasic extends Logging {
     gpred = gtrainDataSetMat.multiply(gparamsMat.transpose)
     gsqerr = squaredErr(gtrainDataSetDurationMat, gpred)
     println(gsqerr)
-
-    // Cache to speed-up since used in every iteration
-    gtrainDataSetMat.cache()
-    gtrainDataSetDurationMat.cache()
 
     time.tick(0)
     for (i <- 0 to 999) {
@@ -115,8 +127,19 @@ object BenchmarkLRBasic extends Logging {
     val gtestDataSet = gtestData.select("gdistm").withColumn("x0", lit(1)).select("x0", "gdistm")
     val gtestDataSetDuration = gtestData.select("duration")
 
+    time.tick(3)
     val gtestDataSetDurationMat = dataframeToMatrix(gtestDataSetDuration)
+    gtestDataSetDurationMat.cache()
+    Utils.eval(spark, gtestDataSetDurationMat)
+    time.tick(1)
+    Utils.eval(spark, gtestDataSetDurationMat)
+    time.tick(-1)
     val gtestDataSetMat = dataframeToMatrix(gtestDataSet)
+    gtestDataSetMat.cache()
+    Utils.eval(spark, gtestDataSetMat)
+    time.tick(1)
+    Utils.eval(spark, gtestDataSetMat)
+    time.tick(-1)
     gparamsMat = dataframeToMatrix(gparams)
     val gtestpred = gtestDataSetMat.multiply(gparamsMat.transpose)
 

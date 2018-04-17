@@ -10,7 +10,11 @@ class TimeProfiler(name: String) {
 
   def tick(label: Int) = {
     t1 = System.nanoTime()
-    res.addResult(label, t1 - t0)
+    if (label >= 0) {
+      res.addResult(label, t1 - t0)
+    } else {
+      res.addResult(-label, -(t1 - t0))
+    }
     t0 = System.nanoTime()
   }
 
