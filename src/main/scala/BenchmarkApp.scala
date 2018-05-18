@@ -12,7 +12,7 @@ import scopt._
 case class Config(benchmark: String = "join", ip: String = "localhost",
   port: String = "50000", username: String = "monetdb", password: String = "monetdb",
   database: String = "database", schema: String = "sys", queries: Seq[Int] = Seq.empty[Int],
-  kwargs: Map[String,String] = Map())
+  sf: Double = 1.0, kwargs: Map[String,String] = Map())
 
 // Because of Spark lazy evaluation, we proceed as follows to measure time
 // performance in the micro-benchmarks:
@@ -208,21 +208,29 @@ object BenchmarkApp extends Logging {
   }
 
   // TPCH benchmark
-  private def tpchBenchmark(spark: SparkSession, queries: Seq[Int]) = {
+  private def tpchBenchmark(spark: SparkSession, queries: Seq[Int], isDfApi: Boolean, sf: Double) = {
     logger.info(s"Starting tpch benchmark")
+    var logname = ""
+    if (isDfApi) {
+      logger.info(s"Using Spark dataframe API")
+      logname = "tpch"
+    } else {
+      logger.info(s"Using SQL in Spark")
+      logname = "tpchSQL"
+    }
     var tpchSchemaProvider: TpchSchemaProvider = null;
     if (datasetLoader.isInstanceOf[DatasetLoaderFromMonetDB]) {
-      tpchSchemaProvider = new TpchSchemaProviderMonetDB(spark, datasetLoader)
+      tpchSchemaProvider = new TpchSchemaProviderMonetDB(spark, datasetLoader, sf)
     } else {
       throw new RuntimeException("Can't match datasetLoader and tpchSchemaProvider")
     }
-    val results = new BenchmarkResult("tpch")
+    val results = new BenchmarkResult(logname)
     for (i <- queries) {
       logger.info(s"Query ${i}")
       val query = Class.forName(f"Q${i}%02d").newInstance.asInstanceOf[TpchQuery]
       var df: Dataset[Row] = null
       val dt = Utils.time {
-        df = query.execute(spark, tpchSchemaProvider)
+        df = query.execute(spark, tpchSchemaProvider, isDfApi)
         df.cache()
         df.foreach(Unit => ())
       }
@@ -247,7 +255,7 @@ object BenchmarkApp extends Logging {
       head("Spark Benchmark", "1.0")
 
       opt[String]('b', "benchmark").required().action( (x, c) =>
-        c.copy(benchmark = x) ).text("required: load | matmult | vecmult | join | joinSQL | lr | lr-basic | tpch")
+        c.copy(benchmark = x) ).text("required: load | matmult | vecmult | join | joinSQL | lr | lr-basic | tpch | tpchSQL")
 
       opt[String]('i', "ip").valueName("<value>").
         action( (x, c) => c.copy(ip = x) ).
@@ -277,6 +285,10 @@ object BenchmarkApp extends Logging {
         action( (x, c) => c.copy(queries = x) ).
         text("list of tpch queries to execute")
 
+      opt[Double]('f', "scalefactor").valueName("<value>").
+        action( (x, c) => c.copy(sf = x) ).
+        text("scale factor of tpch workload (WIP, not used yet)")
+
       help("help").text("prints this message")
 
     }
@@ -300,7 +312,8 @@ object BenchmarkApp extends Logging {
           // Linear regression benchmark
           case "lr" => lrBenchmark(spark, false)
           case "lr-basic" => lrBenchmark(spark, true)
-          case "tpch" => tpchBenchmark(spark, config.queries)
+          case "tpch" => tpchBenchmark(spark, config.queries, true, config.sf)
+          case "tpchSQL" => tpchBenchmark(spark, config.queries, false, config.sf)
           case _ => throw new RuntimeException("invalid benchmark")
         }
 

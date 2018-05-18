@@ -39,6 +39,9 @@
 	<File name="tpch" fileName="${env:LOGDIR}/tpch.csv">
 		<PatternLayout pattern="%m%n" />
 	</File>
+	<File name="tpchSQL" fileName="${env:LOGDIR}/tpchSQL.csv">
+		<PatternLayout pattern="%m%n" />
+	</File>
 </Appenders>
 
 <Loggers>
@@ -85,6 +88,9 @@
 	</Logger>
 	<Logger name="tpch" additivity="false" level="trace">
         	<Appender-ref ref="tpch"/>
+	</Logger>
+	<Logger name="tpchSQL" additivity="false" level="trace">
+        	<Appender-ref ref="tpchSQL"/>
 	</Logger>
 </Loggers>
 

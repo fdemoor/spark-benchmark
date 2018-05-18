@@ -10,7 +10,7 @@ import org.apache.spark.sql.functions.udf
  */
 class Q12 extends TpchQuery {
 
-  override def execute(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
+  override protected def executeDfApi(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
 
     import sc.implicits._
     import schemaProvider._
@@ -30,6 +30,40 @@ class Q12 extends TpchQuery {
       .agg(sum(highPriority($"o_orderpriority")).as("sum_highorderpriority"),
         sum(lowPriority($"o_orderpriority")).as("sum_loworderpriority"))
       .sort($"l_shipmode")
+  }
+
+  override protected def executeSQL(sc: SparkSession): DataFrame = {
+    val q = """
+      select
+      	l_shipmode,
+      	sum(case
+      		when o_orderpriority = '1-URGENT'
+      			or o_orderpriority = '2-HIGH'
+      			then 1
+      		else 0
+      	end) as high_line_count,
+      	sum(case
+      		when o_orderpriority <> '1-URGENT'
+      			and o_orderpriority <> '2-HIGH'
+      			then 1
+      		else 0
+      	end) as low_line_count
+      from
+      	orders,
+      	lineitem
+      where
+      	o_orderkey = l_orderkey
+      	and l_shipmode in ('MAIL', 'SHIP')
+      	and l_commitdate < l_receiptdate
+      	and l_shipdate < l_commitdate
+      	and l_receiptdate >= date '1994-01-01'
+      	and l_receiptdate < date '1994-01-01' + interval '1' year
+      group by
+      	l_shipmode
+      order by
+      	l_shipmode
+    """
+    return sc.sql(q)
   }
 
 }

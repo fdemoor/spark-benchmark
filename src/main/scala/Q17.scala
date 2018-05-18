@@ -11,7 +11,7 @@ import org.apache.spark.sql.functions.udf
  */
 class Q17 extends TpchQuery {
 
-  override def execute(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
+  override protected def executeDfApi(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
 
     import sc.implicits._
     import schemaProvider._
@@ -31,6 +31,29 @@ class Q17 extends TpchQuery {
       .join(fpart, $"key" === fpart("p_partkey"))
       .filter($"l_quantity" < $"avg_quantity")
       .agg(sum($"l_extendedprice") / 7.0)
+  }
+
+  override protected def executeSQL(sc: SparkSession): DataFrame = {
+    val q = """
+      select
+      	sum(l_extendedprice) / 7.0 as avg_yearly
+      from
+      	lineitem,
+      	part
+      where
+      	p_partkey = l_partkey
+      	and p_brand = 'Brand#23'
+      	and p_container = 'MED BOX'
+      	and l_quantity < (
+      		select
+      			0.2 * avg(l_quantity)
+      		from
+      			lineitem
+      		where
+      			l_partkey = p_partkey
+      	)
+    """
+    return sc.sql(q)
   }
 
 }

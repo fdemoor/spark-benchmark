@@ -9,7 +9,7 @@ import org.apache.spark.sql.functions.count
  */
 class Q04 extends TpchQuery {
 
-  override def execute(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
+  override protected def executeDfApi(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
 
     import sc.implicits._
     import schemaProvider._
@@ -23,6 +23,33 @@ class Q04 extends TpchQuery {
       .groupBy($"o_orderpriority")
       .agg(count($"o_orderpriority"))
       .sort($"o_orderpriority")
+  }
+
+  override protected def executeSQL(sc: SparkSession): DataFrame = {
+    val q = """
+      select
+      	o_orderpriority,
+      	count(*) as order_count
+      from
+      	orders
+      where
+      	o_orderdate >= date '1993-07-01'
+      	and o_orderdate < date '1993-10-01'
+      	and exists (
+      		select
+      			*
+      		from
+      			lineitem
+      		where
+      			l_orderkey = o_orderkey
+      			and l_commitdate < l_receiptdate
+      	)
+      group by
+      	o_orderpriority
+      order by
+      	o_orderpriority
+    """
+    return sc.sql(q)
   }
 
 }

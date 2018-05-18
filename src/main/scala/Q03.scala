@@ -10,7 +10,7 @@ import org.apache.spark.sql.functions.udf
  */
 class Q03 extends TpchQuery {
 
-  override def execute(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
+  override protected def executeDfApi(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
 
     import sc.implicits._
     import schemaProvider._
@@ -31,6 +31,35 @@ class Q03 extends TpchQuery {
       .agg(sum($"volume").as("revenue"))
       .sort($"revenue".desc, $"o_orderdate")
       .limit(10)
+  }
+
+  override protected def executeSQL(sc: SparkSession): DataFrame = {
+    val q = """
+      select
+        l_orderkey,
+        sum(l_extendedprice * (1 - l_discount)) as revenue,
+        o_orderdate,
+        o_shippriority
+      from
+        customer,
+        orders,
+        lineitem
+      where
+        c_mktsegment = 'BUILDING'
+        and c_custkey = o_custkey
+        and l_orderkey = o_orderkey
+        and o_orderdate < date '1995-03-15'
+        and l_shipdate > date '1995-03-15'
+      group by
+        l_orderkey,
+        o_orderdate,
+        o_shippriority
+      order by
+        revenue desc,
+        o_orderdate
+      limit 10
+    """
+    return sc.sql(q)
   }
 
 }

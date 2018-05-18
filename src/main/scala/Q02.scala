@@ -9,7 +9,7 @@ import org.apache.spark.sql.functions.min
  */
 class Q02 extends TpchQuery {
 
-  override def execute(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
+  override protected def executeDfApi(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
 
     import sc.implicits._
     import schemaProvider._
@@ -33,5 +33,56 @@ class Q02 extends TpchQuery {
       .sort($"s_acctbal".desc, $"n_name", $"s_name", $"p_partkey")
       .limit(100)
   }
+
+  override protected def executeSQL(sc: SparkSession): DataFrame = {
+    val q = """
+      select
+        s_acctbal,
+        s_name,
+        n_name,
+        p_partkey,
+        p_mfgr,
+        s_address,
+        s_phone,
+        s_comment
+      from
+        part,
+        supplier,
+        partsupp,
+        nation,
+        region
+      where
+        p_partkey = ps_partkey
+        and s_suppkey = ps_suppkey
+        and p_size = 15
+        and p_type like '%BRASS'
+        and s_nationkey = n_nationkey
+        and n_regionkey = r_regionkey
+        and r_name = 'EUROPE'
+        and ps_supplycost = (
+          select
+            min(ps_supplycost)
+          from
+            partsupp,
+            supplier,
+            nation,
+            region
+          where
+            p_partkey = ps_partkey
+            and s_suppkey = ps_suppkey
+            and s_nationkey = n_nationkey
+            and n_regionkey = r_regionkey
+            and r_name = 'EUROPE'
+        )
+      order by
+        s_acctbal desc,
+        n_name,
+        s_name,
+        p_partkey
+      limit 100
+    """
+    return sc.sql(q)
+  }
+
 
 }

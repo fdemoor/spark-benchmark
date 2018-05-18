@@ -10,7 +10,7 @@ import org.apache.spark.sql.functions.udf
  */
 class Q14 extends TpchQuery {
 
-  override def execute(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
+  override protected def executeDfApi(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
 
     import sc.implicits._
     import schemaProvider._
@@ -22,6 +22,25 @@ class Q14 extends TpchQuery {
       $"l_shipdate" >= "1995-09-01" && $"l_shipdate" < "1995-10-01")
       .select($"p_type", reduce($"l_extendedprice", $"l_discount").as("value"))
       .agg(sum(promo($"p_type", $"value")) * 100 / sum($"value"))
+  }
+
+  override protected def executeSQL(sc: SparkSession): DataFrame = {
+    val q = """
+      select
+      	100.00 * sum(case
+      		when p_type like 'PROMO%'
+      			then l_extendedprice * (1 - l_discount)
+      		else 0
+      	end) / sum(l_extendedprice * (1 - l_discount)) as promo_revenue
+      from
+      	lineitem,
+      	part
+      where
+      	l_partkey = p_partkey
+      	and l_shipdate >= date '1995-09-01'
+      	and l_shipdate < date '1995-10-01'
+    """
+    return sc.sql(q)
   }
 
 }

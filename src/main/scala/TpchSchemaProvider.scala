@@ -10,4 +10,5 @@ trait TpchSchemaProvider {
   val part: Dataset[Row]
   val partsupp: Dataset[Row]
   val supplier: Dataset[Row]
+  val sf: Double
 }

@@ -10,7 +10,7 @@ import org.apache.spark.sql.functions.udf
  */
 class Q13 extends TpchQuery {
 
-  override def execute(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
+  override protected def executeDfApi(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
 
     import sc.implicits._
     import schemaProvider._
@@ -24,6 +24,32 @@ class Q13 extends TpchQuery {
       .groupBy($"c_count")
       .agg(count($"o_custkey").as("custdist"))
       .sort($"custdist".desc, $"c_count".desc)
+  }
+
+  override protected def executeSQL(sc: SparkSession): DataFrame = {
+    val q = """
+      select
+      	c_count,
+      	count(*) as custdist
+      from
+      	(
+      		select
+      			c_custkey,
+      			count(o_orderkey)
+      		from
+      			customer left outer join orders on
+      				c_custkey = o_custkey
+      				and o_comment not like '%special%requests%'
+      		group by
+      			c_custkey
+      	) as c_orders (c_custkey, c_count)
+      group by
+      	c_count
+      order by
+      	custdist desc,
+      	c_count desc
+    """
+    return sc.sql(q)
   }
 
 }

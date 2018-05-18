@@ -17,11 +17,11 @@ We also suppose you have downloaded Spark 2.3.0.
 
 ### Workloads
 
-We assume the dbfarm has a database that contains several tables filled with random double values:
+We assume the dbfarm has a database that contains several tables filled with:
 
-* `trand100x1r` to `trand100x1000000r`: 100 columns, with 1, 10, 100, 1K, 10K, 100K and 1M rows.
+* random double values: `trand100x1r` to `trand100x1000000r`: 100 columns, with 1, 10, 100, 1K, 10K, 100K and 1M rows.
 
-* `tnrand10x1000000r` and `t2nrand10x1000000`: 11 columns (first one should be an auto-incremented id, named respectively from `c0` to `c10` and `b0` to `b10`) and 1M rows
+* random integers: `tnrand10x1000000r` and `t2nrand10x1000000r`: 11 columns (first one should be an auto-incremented id, named respectively from `c0` to `c10` and `b0` to `b10`) and 1M rows
 
 The linear regression benchmark also requires the following data
 
@@ -89,10 +89,10 @@ The identifiers are:
 
 * 3: model testing
 
-### tpch.csv
+### {tpch,tpchSQL}.csv
 
 Each line corresponds to a query execution.
-The first number if the query number, the second one is the execution time in nanoseconds.
+The first number is the query number, the second one is the execution time in nanoseconds.
 
 ## Bixi Linear Regression
 
@@ -100,4 +100,4 @@ See [full workflow](wiki/BixiLinearSpark.md) and [basic workflow](wiki/BixiLinea
 
 ## TPC-H Benchmark
 
-The TPC-H queries were written in Spark by Savvas Savvides, see [here](https://github.com/ssavvides/tpch-spark) for the original repository.
+The TPC-H queries using the Spark DataFrame API were written by Savvas Savvides, see [here](https://github.com/ssavvides/tpch-spark) for the original repository.

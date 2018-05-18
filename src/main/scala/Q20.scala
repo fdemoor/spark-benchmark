@@ -11,7 +11,7 @@ import org.apache.spark.sql.functions.udf
  */
 class Q20 extends TpchQuery {
 
-  override def execute(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
+  override protected def executeDfApi(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
 
     import sc.implicits._
     import schemaProvider._
@@ -35,6 +35,49 @@ class Q20 extends TpchQuery {
       .join(nat_supp, $"ps_suppkey" === nat_supp("s_suppkey"))
       .select($"s_name", $"s_address")
       .sort($"s_name")
+  }
+
+  override protected def executeSQL(sc: SparkSession): DataFrame = {
+    val q = """
+      select
+      	s_name,
+      	s_address
+      from
+      	supplier,
+      	nation
+      where
+      	s_suppkey in (
+      		select
+      			ps_suppkey
+      		from
+      			partsupp
+      		where
+      			ps_partkey in (
+      				select
+      					p_partkey
+      				from
+      					part
+      				where
+      					p_name like 'forest%'
+      			)
+      			and ps_availqty > (
+      				select
+      					0.5 * sum(l_quantity)
+      				from
+      					lineitem
+      				where
+      					l_partkey = ps_partkey
+      					and l_suppkey = ps_suppkey
+      					and l_shipdate >= date '1994-01-01'
+      					and l_shipdate < date '1994-01-01' + interval '1' year
+      			)
+      	)
+      	and s_nationkey = n_nationkey
+      	and n_name = 'CANADA'
+      order by
+      	s_name
+    """
+    return sc.sql(q)
   }
 
 }

@@ -12,7 +12,7 @@ import org.apache.spark.sql.functions.udf
  */
 class Q22 extends TpchQuery {
 
-  override def execute(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
+  override protected def executeDfApi(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
 
     import sc.implicits._
     import schemaProvider._
@@ -38,4 +38,48 @@ class Q22 extends TpchQuery {
       .agg(count($"c_acctbal"), sum($"c_acctbal"))
       .sort($"cntrycode")
   }
+
+  override protected def executeSQL(sc: SparkSession): DataFrame = {
+    val q = """
+      select
+      	cntrycode,
+      	count(*) as numcust,
+      	sum(c_acctbal) as totacctbal
+      from
+      	(
+      		select
+      			substring(c_phone, 1, 2) as cntrycode,
+      			c_acctbal
+      		from
+      			customer
+      		where
+      			substring(c_phone, 1, 2) in
+      				('13', '31', '23', '29', '30', '18', '17')
+      			and c_acctbal > (
+      				select
+      					avg(c_acctbal)
+      				from
+      					customer
+      				where
+      					c_acctbal > 0.00
+      					and substring(c_phone, 1, 2) in
+      						('13', '31', '23', '29', '30', '18', '17')
+      			)
+      			and not exists (
+      				select
+      					*
+      				from
+      					orders
+      				where
+      					o_custkey = c_custkey
+      			)
+      	) as custsale
+      group by
+      	cntrycode
+      order by
+      	cntrycode
+    """
+    return sc.sql(q)
+  }
+
 }

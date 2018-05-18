@@ -1,6 +1,6 @@
 import org.apache.spark.sql.SparkSession
 
-class TpchSchemaProviderMonetDB(spark: SparkSession, datasetLoader: DatasetLoader)
+class TpchSchemaProviderMonetDB(spark: SparkSession, datasetLoader: DatasetLoader, scalefactor: Double)
     extends TpchSchemaProvider {
 
   assert(datasetLoader.isInstanceOf[DatasetLoaderFromMonetDB])
@@ -14,6 +14,8 @@ class TpchSchemaProviderMonetDB(spark: SparkSession, datasetLoader: DatasetLoade
   val part = loader.load("part")
   val partsupp = loader.load("partsupp")
   val supplier = loader.load("supplier")
+
+  val sf = scalefactor
 
   customer.cache()
   customer.foreach(Unit => ())
@@ -31,5 +33,14 @@ class TpchSchemaProviderMonetDB(spark: SparkSession, datasetLoader: DatasetLoade
   partsupp.foreach(Unit => ())
   supplier.cache()
   supplier.foreach(Unit => ())
+
+  customer.createOrReplaceTempView("customer")
+  lineitem.createOrReplaceTempView("lineitem")
+  nation.createOrReplaceTempView("nation")
+  region.createOrReplaceTempView("region")
+  order.createOrReplaceTempView("orders")
+  part.createOrReplaceTempView("part")
+  partsupp.createOrReplaceTempView("partsupp")
+  supplier.createOrReplaceTempView("supplier")
 
 }

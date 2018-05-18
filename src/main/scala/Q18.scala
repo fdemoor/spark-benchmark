@@ -11,7 +11,7 @@ import org.apache.spark.sql.functions.udf
  */
 class Q18 extends TpchQuery {
 
-  override def execute(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
+  override protected def executeDfApi(sc: SparkSession, schemaProvider: TpchSchemaProvider): DataFrame = {
 
     import sc.implicits._
     import schemaProvider._
@@ -28,6 +28,45 @@ class Q18 extends TpchQuery {
       .agg(sum("l_quantity"))
       .sort($"o_totalprice".desc, $"o_orderdate")
       .limit(100)
+  }
+
+  override protected def executeSQL(sc: SparkSession): DataFrame = {
+    val q = """
+      select
+      	c_name,
+      	c_custkey,
+      	o_orderkey,
+      	o_orderdate,
+      	o_totalprice,
+      	sum(l_quantity)
+      from
+      	customer,
+      	orders,
+      	lineitem
+      where
+      	o_orderkey in (
+      		select
+      			l_orderkey
+      		from
+      			lineitem
+      		group by
+      			l_orderkey having
+      				sum(l_quantity) > 300
+      	)
+      	and c_custkey = o_custkey
+      	and o_orderkey = l_orderkey
+      group by
+      	c_name,
+      	c_custkey,
+      	o_orderkey,
+      	o_orderdate,
+      	o_totalprice
+      order by
+      	o_totalprice desc,
+      	o_orderdate
+      limit 100
+    """
+    return sc.sql(q)
   }
 
 }
