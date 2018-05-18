@@ -29,6 +29,8 @@ The linear regression benchmark also requires the following data
 
 * `gmdata2017` obtained from the Google Maps API
 
+The data for the TPC-H benchmark can be generated using [tpch-dbgen](https://github.com/electrum/tpch-dbgen).
+
 ### Configuration
 
 See the `submit.conf` file to specify various parameters:
@@ -47,6 +49,14 @@ See the `submit.conf` file to specify various parameters:
 
 Simply type `$ ./submit.sh --help` to display the application usage.
 
+Some examples:
+
+```
+./submit.sh -b vecmult -i node -d database -s schema
+./submit.sh -b lr-basic -i node -d bixi -s bixi
+./submit.sh -b tpch -i node -d tpchsf01 -s tpchsf01 -q $(echo {1..22} | tr ' ' ,)
+```
+
 ## Output format
 
 All time values are measured in nanoseconds.
@@ -63,7 +73,7 @@ format.
 ### {join,joinSQL}.csv
 
 Each line corresponds to a join operation.
-First number is the number of columns involved in the join condition, ranging from 1 to 11.
+The first number is the number of columns involved in the join condition, ranging from 1 to 11.
 Following are the time values.
 
 ### {lr,lr-basic}.csv
@@ -79,6 +89,15 @@ The identifiers are:
 
 * 3: model testing
 
+### tpch.csv
+
+Each line corresponds to a query execution.
+The first number if the query number, the second one is the execution time in nanoseconds.
+
 ## Bixi Linear Regression
 
 See [full workflow](wiki/BixiLinearSpark.md) and [basic workflow](wiki/BixiLinearSpark-Basic.md).
+
+## TPC-H Benchmark
+
+The TPC-H queries were written in Spark by Savvas Savvides, see [here](https://github.com/ssavvides/tpch-spark) for the original repository.

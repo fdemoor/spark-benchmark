@@ -36,6 +36,9 @@
 	<File name="lr-basic" fileName="${env:LOGDIR}/lr-basic.csv">
 		<PatternLayout pattern="%m%n" />
 	</File>
+	<File name="tpch" fileName="${env:LOGDIR}/tpch.csv">
+		<PatternLayout pattern="%m%n" />
+	</File>
 </Appenders>
 
 <Loggers>
@@ -79,6 +82,9 @@
 	</Logger>
 	<Logger name="lr-basic" additivity="false" level="trace">
         	<Appender-ref ref="lr-basic"/>
+	</Logger>
+	<Logger name="tpch" additivity="false" level="trace">
+        	<Appender-ref ref="tpch"/>
 	</Logger>
 </Loggers>
 
