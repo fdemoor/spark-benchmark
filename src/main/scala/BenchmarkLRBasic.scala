@@ -22,7 +22,7 @@ object BenchmarkLRBasic extends Logging {
     val time = new TimeProfiler("lr-basic")
     time.start()
 
-    val gtripData = datasetLoader.loadFromQuery("(select t.duration, g.gdistm, g.gduration from (   select stscode, endscode   from bixi.tripdata2017   where stscode<>endscode   group by stscode, endscode   having count(*) >= 50 )s, tripdata2017 t, gmdata2017 g where t.stscode = s.stscode   and t.endscode = s.endscode   and t.stscode = g.stscode   and t.endscode = g.endscode) as g")
+    val gtripData = datasetLoader.loadFromQuery("(select t.duration, g.gdistm, g.gduration from (   select stscode, endscode   from $SCHEMA.tripdata2017   where stscode<>endscode   group by stscode, endscode   having count(*) >= 50 )s, $SCHEMA.tripdata2017 t, $SCHEMA.gmdata2017 g where t.stscode = s.stscode   and t.endscode = s.endscode   and t.stscode = g.stscode   and t.endscode = g.endscode) as g")
       .withColumn("gdistm", col("gdistm").cast("double"))
     gtripData.cache()
     gtripData.foreach(Unit => ())

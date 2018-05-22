@@ -26,7 +26,7 @@ Use a SQL to read the minimal data required for training from the database.
 We will not be concerned with trips that started and ended at the same station as those are noise. Also, to weed out any further fluctuations in the input data set, we will limit ourselves to only those station combinations which has at the least 50 trips.
 
 ```scala
-val gtripData = datasetLoader(spark, "(select t.duration, g.gdistm, g.gduration from (   select stscode, endscode   from bixi.tripdata2017   where stscode<>endscode   group by stscode, endscode   having count(*) >= 50 )s, tripdata2017 t, gmdata2017 g where t.stscode = s.stscode   and t.endscode = s.endscode   and t.stscode = g.stscode   and t.endscode = g.endscode) as g")
+val gtripData = datasetLoader(spark, "(select t.duration, g.gdistm, g.gduration from (   select stscode, endscode   from bixi.tripdata2017   where stscode<>endscode   group by stscode, endscode   having count(*) >= 50 )s, bixi.tripdata2017 t, bixi.gmdata2017 g where t.stscode = s.stscode   and t.endscode = s.endscode   and t.stscode = g.stscode   and t.endscode = g.endscode) as g")
   .withColumn("gdistm", col("gdistm").cast("double"))
 ```
 
